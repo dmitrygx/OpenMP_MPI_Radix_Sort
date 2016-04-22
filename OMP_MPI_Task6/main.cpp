@@ -54,23 +54,6 @@ int main(int argc, char **argv)
 
 		uint numOfSend = 0;
 		uint first = 0;
-		//for (int i = 0; i < counter; ++i)
-		//{
-		//	Tasks[i] = MPIGetTaskForSort(array, num, lenTasks[i], i, procNum, degree);
-		//	/*if (i % procNum != procRank)*/if ((i != procRank) && (i < procNum))
-		//	{
-		//		MPI_Send(&lenTasks[i], 1, MPI_INT, i/* % procNum*/, (counter - 1) - i, MPI_COMM_WORLD);
-		//		MPI_Send(Tasks[i], lenTasks[i], MPI_DOUBLE, i/* % procNum*/, (counter - 1) - i, MPI_COMM_WORLD);
-		//		numOfSend++;
-		//	}
-		//	else
-		//	{
-		//		ResultTasks[(counter - 1) - i] = OmpMSDRadixSort(Tasks[i], lenTasks[i], degree, num);
-		//		ResultLen[(counter - 1) - i] = lenTasks[i];
-		//		/*cout << procRank << " - " << (counter - 1) - i << endl;*/
-		//		//first++;
-		//	}
-		//}
 		int procRanks = 0;
 		double **Tasks = MPIGetTasksForSort(array, num, lenTasks, procRanks, procNum, degree, counter);
 		for (int i = 0; i < counter; ++i)
@@ -98,43 +81,27 @@ int main(int argc, char **argv)
 		while (numOfSend != 0)
 		{
 			MPI_Recv(&ResultTasksLen, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-			/*cout << "Proc " << status.MPI_SOURCE << " has sent " << ResultTasksLen << " - " << status.MPI_TAG << endl;*/
 			ResultLen[status.MPI_TAG] = ResultTasksLen;
-			ResultTasks[/*numOfRecv*/status.MPI_TAG] = new double[ResultTasksLen];
-			MPI_Recv(ResultTasks[/*numOfRecv*/status.MPI_TAG], ResultTasksLen, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+			ResultTasks[status.MPI_TAG] = new double[ResultTasksLen];
+			MPI_Recv(ResultTasks[status.MPI_TAG], ResultTasksLen, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
 			numOfRecv++;
 			numOfSend--;
 		}
-		/*for (int j = 0; j < counter; ++j)
-		{
-			cout << lenTasks[j] << ": ";
-			for (int i = 0; i < lenTasks[j]; ++i)
-			{
-				cout << Tasks[j][i] << "; ";
-			}
-			cout << endl;
-		}*/
-
-		/*result = OmpMSDRadixSort(array, num, 0, num);*/
 		result = new double[num];
 		int count = 0;
-		/*for (int i = counter/2 - 1; i >= 0; --i)*/
 		for (int i = 0; i < counter / 2; ++i)
 		{
 			for (int j = (int)ResultLen[i] - 1; j >= 0; --j)
 			{
-				/*cout << "ResultTasks = " << ResultTasks[i][j] << endl;*/
 				result[count++] = ResultTasks[i][j];
 			}
 			delete[] ResultTasks[i];
 		}
-		/*for (int i = counter / 2; i < counter; ++i)*/
 		for (int i = counter - 1; i >= counter / 2; --i)
 		{
 			for (int j = 0; j < ResultLen[i]; ++j)
 			{
-				/*cout << "ResultTasks = " << ResultTasks[i][j] << endl;*/
 				result[count++] = ResultTasks[i][j];
 			}
 			delete[] ResultTasks[i];
