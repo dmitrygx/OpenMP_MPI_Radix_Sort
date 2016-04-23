@@ -23,6 +23,10 @@ double* OmpMSDRadixSort(const double* array, const uint len, uint radix, uint fu
 
 double* MPIGetTaskForSort(const double* array, uint len, uint &lenTask, int procRank, int procNum, uint degree);
 
-double** MPIGetTasksForSort(const double* array, uint len, uint *lenTasks, int procRanks, int procNum, uint degree, uint count);
+double** MPIGetTasksForSort(const double* array, 
+							uint len, 
+							uint **lenTasks, 
+							int &countOfTasks, 
+							int procNum);
 
 #endif

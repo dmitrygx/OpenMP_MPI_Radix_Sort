@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <omp.h>
+#include <cmath>
 #include "numeric.h"
 
 #define GETBIT(x,pos)   ( ((x) & ( 0x1 << (pos) )) !=0 )

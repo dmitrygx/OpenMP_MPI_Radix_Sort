@@ -366,57 +366,84 @@ double* MPIGetTaskForSort(const double* array, uint len, uint &lenTask, int proc
 	return Task;
 }
 
-double** MPIGetTasksForSort(const double* array, uint len, uint *lenTasks, int procRanks, int procNum, uint degree, uint count)
+double** MPIGetTasksForSort(const double* array, uint len, uint **lenTasks, int &countOfTasks, int procNum)
 {
+	uint radix = 0;
+	double **Tasks = new double*[2 * (radix + 1)];
+	double **NewTasks;
+	uint *newLenTasks;
+	(*lenTasks) = new uint[2 * (radix + 1)];
 	double val;
-	double **Tasks = new double*[count];
-	uint **bit = new uint*[count];
-	uint pos = 0;
-	int j = degree;
-	for (int k = 0; k < count; ++k)
+	int bit;
+	for (int i = 0; i < 2 * (radix + 1); ++i)
 	{
-		Tasks[k] = new double[len];
-		lenTasks[k] = 0;
+		Tasks[i] = new double[len];
+		(*lenTasks)[i] = 0;
 	}
-	for (int k = 0; k < procNum; k++)
-	{
-		procRanks = k;
-		bit[k] = new uint[degree];
-		j = degree;
-		for (int i = 64 - degree; i < 64; ++i)
-		{
-			bit[k][degree - j] = OmpGetBit(procRanks, i);
-			//cout << bit[degree - j];
-			j--;
-		}
-	}
-	//cout << endl;
-	bool gotNewTask = false;
 	for (int i = 0; i < len; ++i)
 	{
-		gotNewTask = false;
-		for (int k = 0; ((k < count)); k++)
+		val = array[i];
+		bit = OmpGetBit(val, radix);
+		Tasks[bit][(*lenTasks)[bit]++] = val;
+	}
+	for (int i = 0; i < 2 * (radix + 1); ++i)
+	{
+		if (((*lenTasks)[i]) > 0)
 		{
-			j = 0;
-			int b = OmpGetBit(array[i], j);
-			while ((bit[k][j] == b) && (j != degree))
-			{
-				j++;
-				b = OmpGetBit(array[i], j);
-			}
-			if (j == degree)
-			{
-				gotNewTask = true;
-				Tasks[k][lenTasks[k]++] = array[i];
-			}
-			if (gotNewTask)
-				break;
+			countOfTasks++;
 		}
 	}
-	for (int i = 0; i < procNum; i++)
+	radix++;
+	
+	while ((countOfTasks < procNum))
 	{
-		delete[] bit[i];
+		cout << "Radix = " << radix << " CT" << countOfTasks << endl;
+		NewTasks = new double*[(int)pow(2, (int)radix + 1)];
+		newLenTasks = new uint[(int)pow(2, (int)radix + 1)];
+		for (int i = 0; i < pow(2, (int)radix + 1); ++i)
+		{
+			NewTasks[i] = new double[len];
+			newLenTasks[i] = 0;
+		}
+		for (int i = 0; i < (int)pow(2, (int)radix); ++i)
+		{
+			for (int j = 0; j < (*lenTasks)[i]; ++j)
+			{
+				val = Tasks[i][j];
+				bit = OmpGetBit(val, radix);
+				NewTasks[i * 2 + bit][newLenTasks[i * 2 + bit]++] = val;
+			}
+			delete[] Tasks[i];
+		}
+		delete[] Tasks;
+		delete[](*lenTasks);
+		countOfTasks = 0;
+		Tasks = new double*[(int)pow(2, (int)radix + 1)];
+		(*lenTasks) = new uint[(int)pow(2, (int)radix + 1)];
+		for (int i = 0; i < (int)pow(2, (int)radix + 1); ++i)
+		{
+			if (newLenTasks[i] > 0)
+			{
+				countOfTasks++;
+				cout << "TASK+1 => COT = " << countOfTasks << endl;
+			}
+			Tasks[i] = new double[newLenTasks[i]];
+			(*lenTasks)[i] = newLenTasks[i];
+			//cout << i << ": NEWLEN = " << newLenTasks[i] << "; LEN = " << (*lenTasks)[i] << endl;
+			for (int j = 0; j < (*lenTasks)[i]; ++j)
+			{
+				Tasks[i][j] = NewTasks[i][j];
+			}
+			delete[] NewTasks[i];
+		}
+		delete[] newLenTasks;
+		delete[] NewTasks;
+		radix++;
+		if (countOfTasks >= len)
+		{
+			break;
+		}
 	}
-	delete[] bit;
+	cout << "COT = " << countOfTasks << endl;
 	return Tasks;
 }
