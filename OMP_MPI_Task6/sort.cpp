@@ -395,44 +395,59 @@ double** MPIGetTasksForSort(const double* array, uint len, uint **lenTasks, int 
 	}
 	radix++;
 	
-	while ((countOfTasks < procNum))
+	while ((countOfTasks < procNum) && (radix < 64))
 	{
-		cout << "Radix = " << radix << " CT" << countOfTasks << endl;
-		NewTasks = new double*[(int)pow(2, (int)radix + 1)];
-		newLenTasks = new uint[(int)pow(2, (int)radix + 1)];
-		for (int i = 0; i < pow(2, (int)radix + 1); ++i)
+		//cout << "Radix = " << radix << " CT " << countOfTasks << endl;
+		NewTasks = new double*[2 * countOfTasks];
+		newLenTasks = new uint[2 * countOfTasks];
+		for (int i = 0; i < 2 * countOfTasks; ++i)
 		{
 			NewTasks[i] = new double[len];
 			newLenTasks[i] = 0;
 		}
-		for (int i = 0; i < (int)pow(2, (int)radix); ++i)
+
 		{
-			for (int j = 0; j < (*lenTasks)[i]; ++j)
+			for (int i = 0; i < countOfTasks; ++i)
 			{
-				val = Tasks[i][j];
-				bit = OmpGetBit(val, radix);
-				NewTasks[i * 2 + bit][newLenTasks[i * 2 + bit]++] = val;
+				for (int j = 0; j < (*lenTasks)[i]; ++j)
+				{
+					val = Tasks[i][j];
+					bit = OmpGetBit(val, radix);
+					NewTasks[i * 2 + bit][newLenTasks[i * 2 + bit]++] = val;
+				}
+				delete[] Tasks[i];
 			}
-			delete[] Tasks[i];
 		}
 		delete[] Tasks;
 		delete[](*lenTasks);
+		//if (radix == 2)
+		//{
+		//	for (int i = 0; i < 2 * countOfTasks; ++i)
+		//	{
+		//		cout << i << ": " << endl;
+		//		if (newLenTasks[i] > 0)
+		//			cout << "+++" << endl;
+		//	}
+		//	break;
+		//}
+		Tasks = new double*[2 * countOfTasks];
+		(*lenTasks) = new uint[2 * countOfTasks];
+		int countOfTasksT = countOfTasks;
 		countOfTasks = 0;
-		Tasks = new double*[(int)pow(2, (int)radix + 1)];
-		(*lenTasks) = new uint[(int)pow(2, (int)radix + 1)];
-		for (int i = 0; i < (int)pow(2, (int)radix + 1); ++i)
+		for (int i = 0; i < 2 * countOfTasksT; ++i)
 		{
+			//cout << newLenTasks[i] << endl;
 			if (newLenTasks[i] > 0)
 			{
+				Tasks[countOfTasks] = new double[newLenTasks[i]];
+				(*lenTasks)[countOfTasks] = newLenTasks[i];
+				//cout << i << ": NEWLEN = " << newLenTasks[i] << "; LEN = " << (*lenTasks)[i] << endl;
+				for (int j = 0; j < (*lenTasks)[countOfTasks]; ++j)
+				{
+					Tasks[countOfTasks][j] = NewTasks[i][j];
+				}
 				countOfTasks++;
-				cout << "TASK+1 => COT = " << countOfTasks << endl;
-			}
-			Tasks[i] = new double[newLenTasks[i]];
-			(*lenTasks)[i] = newLenTasks[i];
-			//cout << i << ": NEWLEN = " << newLenTasks[i] << "; LEN = " << (*lenTasks)[i] << endl;
-			for (int j = 0; j < (*lenTasks)[i]; ++j)
-			{
-				Tasks[i][j] = NewTasks[i][j];
+				//cout << "TASK+1 => COT = " << countOfTasks << endl;
 			}
 			delete[] NewTasks[i];
 		}
@@ -444,6 +459,6 @@ double** MPIGetTasksForSort(const double* array, uint len, uint **lenTasks, int 
 			break;
 		}
 	}
-	cout << "COT = " << countOfTasks << endl;
+	cout << "COT = " << countOfTasks << " radix = " << radix << endl;
 	return Tasks;
 }
